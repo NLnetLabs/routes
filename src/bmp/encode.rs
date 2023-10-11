@@ -56,24 +56,6 @@ pub fn mk_initiation_msg(sys_name: &str, sys_descr: &str) -> Bytes {
     buf.freeze()
 }
 
-pub fn mk_invalid_initiation_message_that_lacks_information_tlvs() -> Bytes {
-    let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::InitiationMessage);
-
-    // 4.3.  Initiation Message
-    //
-    // "The initiation message consists of the common BMP header followed by
-    //  two or more Information TLVs (Section 4.4) containing information
-    //  about the monitored router.  The sysDescr and sysName Information
-    //  TLVs MUST be sent, any others are optional.  The string TLV MAY be
-    //  included multiple times."
-    //
-    // From: https://www.rfc-editor.org/rfc/rfc7854.html#section-4.3
-
-    finalize_bmp_msg_len(&mut buf);
-    buf.freeze()
-}
-
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::vec_init_then_push)]
 pub fn mk_peer_up_notification_msg(
