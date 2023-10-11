@@ -7,7 +7,7 @@
 
 `bmp-speaker` is a command line tool that simulates an [RFC 7854](https://datatracker.ietf.org/doc/rfc7854/) BMP (BGP Monitoring Protocol) monitored router. The tool connects to a BMP monitoring station and then offers a [REPL](https://www.digitalocean.com/community/tutorials/what-is-repl)-like interface from which you can instruct it to send BMP protocol messages to the monitoring station.
 
-The tool was created to aid with testing of BMP monitoring stations and assumes detailed knowledge of BMP message structure and content as well as the correct sequence in which the various BMP message types should be sent. It this alsp allows sending BMP messages in the incorrect order and with logically inconsistent content. For example, sending a Peer Down Notification message without having first sent the corresponding Peer Up Notification message.
+The tool was created to aid with testing of BMP monitoring stations and assumes detailed knowledge of BMP message structure and content as well as the correct sequence in which the various BMP message types should be sent. It thus also allows sending BMP messages in the incorrect order and with logically inconsistent content. For example, sending a Peer Down Notification message without having first sent the corresponding Peer Up Notification message.
 
 ### Disclaimer
 
