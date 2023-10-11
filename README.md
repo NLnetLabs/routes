@@ -1,8 +1,5 @@
 # BGP routing related tools
 
-[![crates.io](https://img.shields.io/crates/v/routes.svg?color=brightgreen)](https://crates.io/crates/routes)
-
-
 ## `bmp-speaker`
 
 `bmp-speaker` is a command line tool that simulates an [RFC 7854](https://datatracker.ietf.org/doc/rfc7854/) BMP (BGP Monitoring Protocol) monitored router. The tool connects to a BMP monitoring station and then offers a [REPL](https://www.digitalocean.com/community/tutorials/what-is-repl)-like interface from which you can instruct it to send BMP protocol messages to the monitoring station.
