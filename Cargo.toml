@@ -1,0 +1,10 @@
+[package]
+name = "routes"
+version = "0.1.0-dev"
+edition = "2021"
+authors = ["NLnet Labs <routing-team@nlnetlabs.nl>"]
+description = "BGP routing related tools"
+repository = "https://github.com/NLnetLabs/routes/"
+keywords = ["routing", "bgp"]
+categories = ["network-programming"]
+license = "MPL-2.0"
