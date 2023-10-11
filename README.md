@@ -17,7 +17,7 @@ The functionality availability is the subset that was needed by the authors unti
 
 Contributions and requests are welcome via GitHub pull requests and issues.
 
-This version of the tool uses some functionality from the NLnet Labs [routecore](https://github.com/NLnetLabs/routecore/) crate with the intention that all BMP and BGP messages construction is done by that crate. Some contributions may therefore be better suited as contributions to the routecore repository rather than to this repository.
+This version of the tool uses some functionality from the NLnet Labs [routecore](https://github.com/NLnetLabs/routecore/) crate with the intention that all BMP and BGP message construction is done by that crate. Some contributions may therefore be better suited as contributions to the routecore repository rather than to this repository.
 
 ### Installation
 
@@ -41,7 +41,7 @@ Executing this command will drop you into the REPL from where you can instruct `
 > route_monitoring global 0 10.0.0.1 12345 0 none "e [123,456,789] 10.0.0.1 BLACKHOLE,123:44 127.0.0.1/32"
 ```
 
-One can also use the tool in a batch-like mode by storing the commands to send in a tezt file and piping them into the tool. Beware however that the tool exits when the input pipe is closed.
+One can also use the tool in a batch-like mode by storing the commands to send in a text file and piping them into the tool. Beware however that the tool exits when the input pipe is closed.
 
 ### Documentation
 
