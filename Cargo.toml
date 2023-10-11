@@ -1,6 +1,6 @@
 [package]
 name = "routes"
-version = "0.1.0-dev"
+version = "0.1.0"
 edition = "2021"
 authors = ["NLnet Labs <routing-team@nlnetlabs.nl>"]
 description = "BGP routing related tools"
@@ -8,3 +8,12 @@ repository = "https://github.com/NLnetLabs/routes/"
 keywords = ["routing", "bgp"]
 categories = ["network-programming"]
 license = "MPL-2.0"
+
+[dependencies]
+anyhow = "1.0.75"
+bytes = "1.5.0"
+chrono = "0.4.31"
+clap = { version = "4.4.6", features = ["cargo"] }
+const_format = "0.2.31"
+easy-repl = "0.2.1"
+routecore = { version = "0.4.0-dev", features = ["bmp"], git = "https://github.com/NLnetLabs/routecore", branch = "compose-messages-nlri-v2" }
