@@ -21,7 +21,7 @@ This version of the tool uses some functionality from the NLnet Labs [routecore]
 As `bmp-speaker` is not yet published to `crates.io` installation via `cargo install` requires that you point `cargo` to the `bmp-speaker` Git repository:
 
 ```
-cargo install routes --bin bmp-speaker --version 0.1.0-dev --git https://github.com/NLnetLabs/routes
+cargo install routes --bin bmp-speaker --git https://github.com/NLnetLabs/routes
 ```
 
 ### Usage
