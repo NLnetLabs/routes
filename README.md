@@ -14,7 +14,7 @@ The functionality availability is the subset that was needed by the authors unti
 
 Contributions and requests are welcome via GitHub pull requests and issues.
 
-This version of the tool uses some functionality from the NLnet Labs [routecore](https://github.com/NLnetLabs/routecore/) crate with the intention that all BMP and BGP message construction is done by that crate. Some contributions may therefore be better suited as contributions to the routecore repository rather than to this repository.
+This tool uses some functionality from the NLnet Labs [routecore](https://github.com/NLnetLabs/routecore/) crate with the intention that all BMP and BGP message construction should be done by that crate. Some contributions may therefore be better suited as contributions to the routecore repository rather than to this repository.
 
 ### Installation
 
