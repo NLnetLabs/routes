@@ -40,6 +40,8 @@ Executing this command will drop you into the REPL from where you can instruct `
 
 One can also use the tool in a batch-like mode by storing the commands to send in a text file and piping them into the tool. Beware however that the tool exits when the input pipe is closed.
 
+Note: [RFC 7854 section 3.2](https://datatracker.ietf.org/doc/html/rfc7854#section-3.2) states that _"No BMP message is ever sent from the monitoring station to the monitored router"_. As such there is no feedback from `bmp-speaker` about the messages it sends as it has no idea what the monitoring station does with them, if anything.
+
 ### Documentation
 
 TO DO
