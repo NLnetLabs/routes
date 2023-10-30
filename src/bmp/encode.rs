@@ -14,9 +14,9 @@ use routecore::bmp::message::{
     InformationTlvType, MessageType, PeerType, TerminationInformation,
 };
 
-pub fn mk_initiation_msg(sys_name: &str, sys_descr: &str) -> Bytes {
+pub fn mk_initiation_msg(trace_id: u8, sys_name: &str, sys_descr: &str) -> Bytes {
     let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::InitiationMessage);
+    push_bmp_common_header(&mut buf, MessageType::InitiationMessage, trace_id);
 
     // 4.3.  Initiation Message
     //
@@ -59,6 +59,7 @@ pub fn mk_initiation_msg(sys_name: &str, sys_descr: &str) -> Bytes {
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::vec_init_then_push)]
 pub fn mk_peer_up_notification_msg(
+    trace_id: u8,
     per_peer_header: &PerPeerHeader,
     local_address: IpAddr,
     local_port: u16,
@@ -71,7 +72,7 @@ pub fn mk_peer_up_notification_msg(
     eor_capable: bool,
 ) -> Bytes {
     let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::PeerUpNotification);
+    push_bmp_common_header(&mut buf, MessageType::PeerUpNotification, trace_id);
     push_bmp_per_peer_header(&mut buf, per_peer_header);
 
     // 4.10.  Peer Up Notification
@@ -399,6 +400,7 @@ pub fn mk_peer_up_notification_msg(
 
 #[allow(clippy::vec_init_then_push)]
 pub fn mk_route_monitoring_msg(
+    trace_id: u8,
     per_peer_header: &PerPeerHeader,
     withdrawals: &Prefixes,
     announcements: &Announcements,
@@ -406,10 +408,11 @@ pub fn mk_route_monitoring_msg(
 ) -> Bytes {
     let bgp_msg_buf =
         mk_bgp_update(withdrawals, announcements, extra_path_attributes);
-    mk_raw_route_monitoring_msg(per_peer_header, bgp_msg_buf)
+    mk_raw_route_monitoring_msg(trace_id, per_peer_header, bgp_msg_buf)
 }
 
 pub fn mk_raw_route_monitoring_msg(
+    trace_id: u8,
     per_peer_header: &PerPeerHeader,
     bgp_msg_buf: Bytes,
 ) -> Bytes {
@@ -421,7 +424,7 @@ pub fn mk_raw_route_monitoring_msg(
     // From: https://www.rfc-editor.org/rfc/rfc7854.html#section-4.6
 
     let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::RouteMonitoring);
+    push_bmp_common_header(&mut buf, MessageType::RouteMonitoring, trace_id);
     push_bmp_per_peer_header(&mut buf, per_peer_header);
     buf.extend_from_slice(&bgp_msg_buf);
     finalize_bmp_msg_len(&mut buf);
@@ -873,10 +876,11 @@ pub fn mk_bgp_update(
 }
 
 pub fn mk_peer_down_notification_msg(
+    trace_id: u8,
     per_peer_header: &PerPeerHeader,
 ) -> Bytes {
     let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::PeerDownNotification);
+    push_bmp_common_header(&mut buf, MessageType::PeerDownNotification, trace_id);
     push_bmp_per_peer_header(&mut buf, per_peer_header);
 
     // 4.9.  Peer Down Notification
@@ -898,7 +902,7 @@ pub fn mk_peer_down_notification_msg(
     buf.freeze()
 }
 
-pub fn mk_statistics_report_msg(per_peer_header: &PerPeerHeader) -> Bytes {
+pub fn mk_statistics_report_msg(trace_id: u8, per_peer_header: &PerPeerHeader) -> Bytes {
     // 4.8.  Stats Reports
     //
     // "Following the common BMP header and per-peer header is a 4-byte field
@@ -930,7 +934,7 @@ pub fn mk_statistics_report_msg(per_peer_header: &PerPeerHeader) -> Bytes {
     // From: https://www.rfc-editor.org/rfc/rfc7854.html#section-4.8
 
     let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::StatisticsReport);
+    push_bmp_common_header(&mut buf, MessageType::StatisticsReport, trace_id);
     push_bmp_per_peer_header(&mut buf, per_peer_header);
 
     buf.extend_from_slice(&0u32.to_be_bytes()); // zero stats
@@ -939,9 +943,9 @@ pub fn mk_statistics_report_msg(per_peer_header: &PerPeerHeader) -> Bytes {
     buf.freeze()
 }
 
-pub fn mk_termination_msg() -> Bytes {
+pub fn mk_termination_msg(trace_id: u8) -> Bytes {
     let mut buf = BytesMut::new();
-    push_bmp_common_header(&mut buf, MessageType::TerminationMessage);
+    push_bmp_common_header(&mut buf, MessageType::TerminationMessage, trace_id);
 
     // 4.5. Termination Message
     //
@@ -991,7 +995,7 @@ fn finalize_bgp_msg_len(buf: &mut BytesMut) {
     buf[17] = len_bytes[1];
 }
 
-fn push_bmp_common_header(buf: &mut BytesMut, msg_type: MessageType) {
+fn push_bmp_common_header(buf: &mut BytesMut, msg_type: MessageType, trace_id: u8) {
     //  0                   1                   2                   3
     //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     // +-+-+-+-+-+-+-+-+
@@ -1003,7 +1007,17 @@ fn push_bmp_common_header(buf: &mut BytesMut, msg_type: MessageType) {
     // +---------------+
     //
     // From: https://datatracker.ietf.org/doc/html/rfc4271#section-4.1
-    buf.extend_from_slice(&[3u8]); // version 3
+    //
+    // We abuse the version field to store an embedded optional trace
+    // id:
+    //
+    //  0                   1                   2                   3
+    //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+    // +-+-+-+-+-+-+-+-+
+    // |  ID   |  Ver  |
+    // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    let mut version: u8 = 3 | (trace_id << 4);
+    buf.put_u8(version);
     buf.resize(buf.len() + 4, 0u8); // placeholder length, to be replaced later
     buf.extend_from_slice(&u8::from(msg_type).to_be_bytes());
 }

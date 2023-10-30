@@ -2,7 +2,7 @@ use std::{
     io::Write,
     net::{IpAddr, TcpStream},
     str::FromStr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, atomic::AtomicBool}, ops::{Deref, DerefMut},
 };
 
 use const_format::formatcp;
@@ -31,15 +31,28 @@ fn main() {
         .value_name("IP or IP:PORT")
         .help(formatcp!("Connect to a BMP monitoring station on this address [default port: {DEF_BMP_PORT}]"));
 
+    let tracing_arg = clap::Arg::new("tracing")
+        .short('t')
+        .long("tracing")
+        .required(false)
+        .action(clap::ArgAction::SetTrue)
+        .help(formatcp!("Enable injection of diagnostic tracing IDs"));
+
     let matches = clap::Command::new("bmp-speaker")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
         .arg(server_arg)
+        .arg(tracing_arg)
         .get_matches();
 
     let server = matches.get_one::<String>("server").unwrap();
+    let trace_id: u8 = if matches.get_flag("tracing") {
+        1
+    } else {
+        0
+    };
 
-    let server = if !server.contains(":") {
+    let server = if !server.contains(':') {
         format!("{server}:{DEF_BMP_PORT}")
     } else {
         server.to_string()
@@ -54,7 +67,7 @@ fn main() {
         }
 
         Ok(stream) => {
-            let stream = Arc::new(Mutex::new(stream));
+            let stream = Arc::new(Mutex::new((stream, trace_id)));
 
             let mut repl = Repl::builder()
                 .add("initiation", initiate_cmd(stream.clone()))
@@ -74,17 +87,30 @@ fn main() {
     }
 }
 
-fn initiate_cmd<'a>(stream: Arc<Mutex<TcpStream>>) -> easy_repl::Command<'a> {
+fn bump_trace_id(trace_id: &mut u8) {
+    if *trace_id > 0 {
+        eprintln!("Trace ID: {trace_id}");
+        *trace_id += 1;
+        if *trace_id > 0b0000_1111 {
+            *trace_id = 1;
+        }
+    }
+}
+
+fn initiate_cmd<'a>(stream: Arc<Mutex<(TcpStream, u8)>>) -> easy_repl::Command<'a> {
     command! {
         "BMP Initiation Message",
         (sys_name: String, sys_descr: String) => |sys_name: String, sys_descr: String| {
-            stream.lock().unwrap().write_all(mk_initiation_msg(&sys_name, &sys_descr).as_ref()).unwrap();
+            let mut binding = stream.lock().unwrap();
+            let (stream, trace_id) = binding.deref_mut();
+            stream.write_all(mk_initiation_msg(*trace_id, &sys_name, &sys_descr).as_ref()).unwrap();
+            bump_trace_id(trace_id);
             Ok(CommandStatus::Done)
         }
     }
 }
 
-fn peer_up_cmd<'a>(stream: Arc<Mutex<TcpStream>>) -> easy_repl::Command<'a> {
+fn peer_up_cmd<'a>(stream: Arc<Mutex<(TcpStream, u8)>>) -> easy_repl::Command<'a> {
     command! {
         "BMP Peer Up Notification",
         (
@@ -124,8 +150,11 @@ fn peer_up_cmd<'a>(stream: Arc<Mutex<TcpStream>>) -> easy_repl::Command<'a> {
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(
+            let mut binding = stream.lock().unwrap();
+            let (stream, trace_id) = binding.deref_mut();
+            stream.write_all(
                 mk_peer_up_notification_msg(
+                    *trace_id,
                     &per_peer_header,
                     local_address,
                     local_port,
@@ -136,15 +165,16 @@ fn peer_up_cmd<'a>(stream: Arc<Mutex<TcpStream>>) -> easy_repl::Command<'a> {
                     received_bgp_id,
                     vec![],
                     true)
-                .as_ref())
-                .unwrap();
+                    .as_ref())
+                    .unwrap();
+            bump_trace_id(trace_id);
             Ok(CommandStatus::Done)
         }
     }
 }
 
 fn route_monitoring_cmd<'a>(
-    stream: Arc<Mutex<TcpStream>>,
+    stream: Arc<Mutex<(TcpStream, u8)>>,
 ) -> easy_repl::Command<'a> {
     command! {
         "BMP Route Monitoring Message (from announcements & withdrawals)",
@@ -177,7 +207,10 @@ fn route_monitoring_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(mk_route_monitoring_msg(&per_peer_header, &withdrawals, &announcements, &[]).as_ref()).unwrap();
+            let mut binding = stream.lock().unwrap();
+            let (stream, trace_id) = binding.deref_mut();
+            stream.write_all(mk_route_monitoring_msg(*trace_id, &per_peer_header, &withdrawals, &announcements, &[]).as_ref()).unwrap();
+            bump_trace_id(trace_id);
             Ok(CommandStatus::Done)
         }
     }
@@ -207,7 +240,7 @@ impl FromStr for HexBytes {
 }
 
 fn route_monitoring_raw_cmd<'a>(
-    stream: Arc<Mutex<TcpStream>>,
+    stream: Arc<Mutex<(TcpStream, u8)>>,
 ) -> easy_repl::Command<'a> {
     command! {
         "BMP Route Monitoring Message (from hex BGP UPDATE bytes)",
@@ -240,14 +273,17 @@ fn route_monitoring_raw_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(mk_raw_route_monitoring_msg(&per_peer_header, bgp_msg_buf.to_vec().into()).as_ref()).unwrap();
+            let mut binding = stream.lock().unwrap();
+            let (stream, trace_id) = binding.deref_mut();
+            stream.write_all(mk_raw_route_monitoring_msg(*trace_id, &per_peer_header, bgp_msg_buf.to_vec().into()).as_ref()).unwrap();
+            bump_trace_id(trace_id);
             Ok(CommandStatus::Done)
         }
     }
 }
 
 fn peer_down_cmd<'a>(
-    stream: Arc<Mutex<TcpStream>>,
+    stream: Arc<Mutex<(TcpStream, u8)>>,
 ) -> easy_repl::Command<'a> {
     command! {
         "BMP Peer Down Notification",
@@ -276,18 +312,24 @@ fn peer_down_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(mk_peer_down_notification_msg(&per_peer_header).as_ref()).unwrap();
+            let mut binding = stream.lock().unwrap();
+            let (stream, trace_id) = binding.deref_mut();
+            stream.write_all(mk_peer_down_notification_msg(*trace_id, &per_peer_header).as_ref()).unwrap();
+            bump_trace_id(trace_id);
             Ok(CommandStatus::Done)
         }
     }
 }
 
 fn terminate_cmd<'a>(
-    stream: Arc<Mutex<TcpStream>>,
+    stream: Arc<Mutex<(TcpStream, u8)>>,
 ) -> easy_repl::Command<'a> {
     command! {
         "BMP Termination Message", () => || {
-            stream.lock().unwrap().write_all(mk_termination_msg().as_ref()).unwrap();
+            let mut binding = stream.lock().unwrap();
+            let (stream, trace_id) = binding.deref_mut();
+            stream.write_all(mk_termination_msg(*trace_id).as_ref()).unwrap();
+            bump_trace_id(trace_id);
             Ok(CommandStatus::Done)
         }
     }
