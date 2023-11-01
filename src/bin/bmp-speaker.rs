@@ -124,18 +124,22 @@ fn peer_up_cmd<'a>(stream: Arc<Mutex<TcpStream>>) -> easy_repl::Command<'a> {
                 peer_address,
                 peer_as,
                 peer_bgp_id};
+            let (bytes, warnings) = mk_peer_up_notification_msg(
+                &per_peer_header,
+                local_address,
+                local_port,
+                remote_port,
+                sent_open_asn,
+                received_open_asn,
+                sent_bgp_identifier,
+                received_bgp_id,
+                vec![],
+                true);
+            for msg in warnings {
+                eprintln!("Warning: {}", msg);
+            }
             stream.lock().unwrap().write_all(
-                mk_peer_up_notification_msg(
-                    &per_peer_header,
-                    local_address,
-                    local_port,
-                    remote_port,
-                    sent_open_asn,
-                    received_open_asn,
-                    sent_bgp_identifier,
-                    received_bgp_id,
-                    vec![],
-                    true)
+                bytes
                 .as_ref())
                 .unwrap();
             Ok(CommandStatus::Done)
@@ -177,7 +181,11 @@ fn route_monitoring_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(mk_route_monitoring_msg(&per_peer_header, &withdrawals, &announcements, &[]).as_ref()).unwrap();
+            let (bytes, warnings) = mk_route_monitoring_msg(&per_peer_header, &withdrawals, &announcements, &[]);
+            for msg in warnings {
+                eprintln!("Warning: {}", msg);
+            }
+            stream.lock().unwrap().write_all(bytes.as_ref()).unwrap();
             Ok(CommandStatus::Done)
         }
     }
@@ -240,7 +248,11 @@ fn route_monitoring_raw_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(mk_raw_route_monitoring_msg(&per_peer_header, bgp_msg_buf.to_vec().into()).as_ref()).unwrap();
+            let (bytes, warnings) = mk_raw_route_monitoring_msg(&per_peer_header, bgp_msg_buf.to_vec().into());
+            for msg in warnings {
+                eprintln!("Warning: {}", msg);
+            }
+            stream.lock().unwrap().write_all(bytes.as_ref()).unwrap();
             Ok(CommandStatus::Done)
         }
     }
@@ -276,7 +288,11 @@ fn peer_down_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            stream.lock().unwrap().write_all(mk_peer_down_notification_msg(&per_peer_header).as_ref()).unwrap();
+            let (bytes, warnings) = mk_peer_down_notification_msg(&per_peer_header);
+            for msg in warnings {
+                eprintln!("Warning: {}", msg);
+            }
+            stream.lock().unwrap().write_all(bytes.as_ref()).unwrap();
             Ok(CommandStatus::Done)
         }
     }
