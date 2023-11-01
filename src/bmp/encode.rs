@@ -637,16 +637,78 @@ pub fn mk_bgp_update(
                 r#type: PathAttributeType,
                 pa_bytes: &[u8],
             ) {
+                // Path Attributes:
+                // 
+                // A variable-length sequence of path attributes is present in
+                // every UPDATE message, except for an UPDATE message that carries
+                // only the withdrawn routes.  Each path attribute is a triple
+                // <attribute type, attribute length, attribute value> of variable
+                // length.
+                // 
+                // Attribute Type is a two-octet field that consists of the
+                // Attribute Flags octet, followed by the Attribute Type Code
+                // octet.
+                // 
+                //       0                   1
+                //       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+                //       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                //       |  Attr. Flags  |Attr. Type Code|
+                //       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                // 
+                // The high-order bit (bit 0) of the Attribute Flags octet is the
+                // Optional bit.  It defines whether the attribute is optional (if
+                // set to 1) or well-known (if set to 0).
+                // 
+                // The second high-order bit (bit 1) of the Attribute Flags octet
+                // is the Transitive bit.  It defines whether an optional
+                // attribute is transitive (if set to 1) or non-transitive (if set
+                // to 0).
+                // 
+                // For well-known attributes, the Transitive bit MUST be set to 1.
+                // (See Section 5 for a discussion of transitive attributes.)
+                // 
+                // The third high-order bit (bit 2) of the Attribute Flags octet
+                // is the Partial bit.  It defines whether the information
+                // contained in the optional transitive attribute is partial (if
+                // set to 1) or complete (if set to 0).  For well-known attributes
+                // and for optional non-transitive attributes, the Partial bit
+                // MUST be set to 0.
+                // 
+                // The fourth high-order bit (bit 3) of the Attribute Flags octet
+                // is the Extended Length bit.  It defines whether the Attribute
+                // Length is one octet (if set to 0) or two octets (if set to 1).
+                // 
+                // The lower-order four bits of the Attribute Flags octet are
+                // unused.  They MUST be zero when sent and MUST be ignored when
+                // received.
+                // 
+                // The Attribute Type Code octet contains the Attribute Type Code.
+                // Currently defined Attribute Type Codes are discussed in Section
+                // 5.
+                // 
+                // If the Extended Length bit of the Attribute Flags octet is set
+                // to 0, the third octet of the Path Attribute contains the length
+                // of the attribute data in octets.
+                // 
+                // If the Extended Length bit of the Attribute Flags octet is set
+                // to 1, the third and fourth octets of the path attribute contain
+                // the length of the attribute data in octets.
+                // 
+                // The remaining octets of the Path Attribute represent the
+                // attribute value and are interpreted according to the Attribute
+                // Flags and the Attribute Type Code.  The supported Attribute
+                // Type Codes, and their attribute values and uses are as follows:
+
                 let len = pa_bytes.len();
 
-                let (optional, transitive, complete) = match r#type {
+                let (optional, transitive, partial) = match r#type {
                     PathAttributeType::AsPath
                     | PathAttributeType::NextHop
-                    | PathAttributeType::Origin => (false, true, true),
+                    | PathAttributeType::Origin => (false, true, false),
                     PathAttributeType::Communities
                     | PathAttributeType::ExtendedCommunities
-                    | PathAttributeType::LargeCommunities
-                    | PathAttributeType::MpReachNlri => (true, false, true),
+                    | PathAttributeType::LargeCommunities => (true, true, false),
+                    PathAttributeType::MpReachNlri => (true, false, false),
                     _ => todo!(),
                 };
 
@@ -654,10 +716,12 @@ pub fn mk_bgp_update(
                 if optional {
                     flags |= 0b1000_0000;
                 }
-                if transitive {
+                if !optional || transitive {
                     flags |= 0b0100_0000;
                 }
-                if complete {
+                if !optional || !transitive {
+                    flags &= 0b1101_1111;
+                } else if partial {
                     flags |= 0b0010_0000;
                 }
                 if len > 255 {
