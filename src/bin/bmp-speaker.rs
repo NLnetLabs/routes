@@ -39,7 +39,7 @@ fn main() {
 
     let server = matches.get_one::<String>("server").unwrap();
 
-    let server = if !server.contains(":") {
+    let server = if !server.contains(':') {
         format!("{server}:{DEF_BMP_PORT}")
     } else {
         server.to_string()
@@ -194,7 +194,7 @@ fn route_monitoring_cmd<'a>(
 struct HexBytes(Vec<u8>);
 
 impl HexBytes {
-    pub fn to_vec(self) -> Vec<u8> {
+    pub fn into_vec(self) -> Vec<u8> {
         self.0
     }
 }
@@ -248,7 +248,7 @@ fn route_monitoring_raw_cmd<'a>(
                 peer_address,
                 peer_as,
                 peer_bgp_id};
-            let (bytes, warnings) = mk_raw_route_monitoring_msg(&per_peer_header, bgp_msg_buf.to_vec().into());
+            let (bytes, warnings) = mk_raw_route_monitoring_msg(&per_peer_header, bgp_msg_buf.into_vec().into());
             for msg in warnings {
                 eprintln!("Warning: {}", msg);
             }
