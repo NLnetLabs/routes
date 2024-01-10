@@ -1,6 +1,6 @@
 [package]
 name = "routes"
-version = "0.1.0-dev"
+version = "0.1.0-rc0"
 edition = "2021"
 authors = ["NLnet Labs <routing-team@nlnetlabs.nl>"]
 description = "BGP routing related tools"
