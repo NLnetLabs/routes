@@ -16,4 +16,4 @@ chrono = "0.4.31"
 clap = { version = "4.4.6", features = ["cargo"] }
 const_format = "0.2.31"
 easy-repl = "0.2.1"
-routecore = { version = "0.4.0-dev", features = ["bmp"], git = "https://github.com/NLnetLabs/routecore" }
+routecore = { version = "0.4.0-rc0", features = ["bmp"] }
