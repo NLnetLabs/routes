@@ -4,4 +4,4 @@
 
 Released 2024-01-18.
 
-First release candidate.
+First release.
